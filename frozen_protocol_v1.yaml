@@ -1,0 +1,90 @@
+protocol_version: RG_POSR_FROZEN_V1
+status: FROZEN
+method: Reliability-Gated Prototypical Open-Set Recognition
+acronym: RG-POSR
+participant_protocol:
+  participants: 69
+  enrolled: 49
+  final_unknown: 20
+  role_counts:
+    enrolled: 49
+    unknown: 20
+  development_session: earliest usable session
+  test_session: latest usable session
+  final_unknown_used_for_training: false
+  final_unknown_used_for_preprocessing_fit: false
+  final_unknown_used_for_threshold_selection: false
+  pseudo_unknown_calibration_folds: 5
+sampling_and_windows:
+  sample_rate_hz: 15
+  identity_window_seconds: 10
+  identity_window_frames: 150
+  aggregation_seconds:
+    - 30
+    - 60
+    - 120
+  manifest_split_counts_for_10s:
+    test_known: 13325
+    train: 9171
+    test_unknown: 5357
+    validation: 2601
+identity_schema:
+  dimensions:
+    head: 13
+    left: 22
+    right: 22
+    gaze: 19
+  normalization: frozen enrolled Session-1 training mean/std
+  quaternion_treatment: "raw quaternion unit normalization, relative quaternion construction, unit normalization, then component-wise frozen z-score"
+  constant_channels_retained_for_baseline_comparability:
+    - left_ul_button_pressed
+    - left_ul_button_touched
+    - right_ul_button_pressed
+    - right_ul_button_touched
+reliability_schema:
+  dimensions:
+    head: 6
+    left: 6
+    right: 6
+    gaze: 7
+  total_dimension: 25
+  synthetic_corruption_severity_is_model_input: false
+  quality_features_available_at_test_time: true
+  descriptor_normalization: training_only_median_and_iqr_over_1.349
+  thresholds_fit_using: enrolled Session-1 eligible 10-second training windows only
+prototype_decision:
+  modality_embedding: L2-normalized
+  fusion: reliability-weighted sum followed by L2 normalization
+  prototype: one trainable L2-normalized prototype per enrolled identity
+  distance: cosine distance 1-z_dot_p
+  effective_reliability: sum(alpha_m * r_m)
+  scaled_distance: "d / max(rho_eff, epsilon)^gamma"
+  gamma_candidates:
+    - 0.0
+    - 0.5
+    - 1.0
+    - 2.0
+  gamma_selection: pseudo-unknown calibration only
+  thresholds: one frozen threshold per aggregation duration
+training_objective:
+  classification: angular-margin classification over prototypes
+  reliability: Huber reliability-consistency loss
+  monotonic: paired ranking across corruption severities
+  clean_severity: 0.0
+  severity_target: 1-severity
+source_sha256:
+  feature_schema.json: db5b00b99dfff2a608ac0dfd114d8f5a7430127a64596f288200b4578459af28
+  normalization_stats.json: 8f26640230782b9abf499de48cef1d59acc2c2d0e68e07a16d589dc55dca213f
+  participant_split_manifest.csv: 7a925db1560dc3d3aaa8585ad972a25b2d998c36b4ef682f1161402b74c2f98b
+  window_manifest.csv: 4a2f51926d4340990b3241255a11f4f0644e18bed912be26d51e0422d6d227eb
+  prior_audit_report.json: 2f473e6f65f8541a6e2ebe86c419c6f3d31fe786b03d33db986f9e38e135a91e
+fitted_frame_thresholds:
+  head_kinematic_outlier_threshold: 8.260133743286133
+  left_kinematic_outlier_threshold: 8.926848411560059
+  right_kinematic_outlier_threshold: 8.759622573852539
+  gaze_disagreement_outlier_threshold: 1.5707963705062866
+  training_quantile: 0.99
+  low_quality_threshold: 0.5
+  low_openness_threshold: 0.1
+  constant_pose_delta_standardized: 0.001
+  fit_window_count: 9170

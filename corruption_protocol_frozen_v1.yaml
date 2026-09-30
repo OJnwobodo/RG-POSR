@@ -1,0 +1,31 @@
+status: FROZEN
+version: RG_POSR_CORRUPTION_V1
+training_seen:
+  modality_dropout:
+    - 0.0
+    - 1.0
+  gaussian_noise_std_fraction:
+    - 0.1
+    - 0.25
+    - 0.5
+    - 0.75
+  temporal_burst_loss_fraction:
+    - 0.1
+    - 0.25
+    - 0.5
+heldout_unseen:
+  stuck_sensor_fraction:
+    - 0.1
+    - 0.25
+    - 0.5
+  motion_bias_or_drift_fraction:
+    - 0.1
+    - 0.25
+    - 0.5
+  timestamp_jitter_fraction:
+    - 0.1
+    - 0.25
+    - 0.5
+severity_target: 1-severity
+same_corruption_realization_for_paired_models: true
+test_unknown_never_used_for_selection: true
