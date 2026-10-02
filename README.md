@@ -1,460 +1,165 @@
-# RG-POSR: Reliability-Gated Prototypical Open-Set Recognition
+# RG-POSR
 
-This repository contains the code, frozen experimental protocol, evaluation scripts, launch scripts, and revision-analysis outputs for the manuscript:
+## Reliability-Gated Prototypical Open-Set Recognition for Cross-Session Behavioural Biometrics in Virtual Reality
 
-**Reliability-Gated Prototypical Open-Set Recognition for Cross-Session Behavioural Biometrics in Extended Reality**
+This repository contains the implementation and reproducibility materials accompanying the paper:
 
-The work investigates cross-session open-set behavioural biometrics from multimodal XR signals using the **Who Is Alyx?** dataset.
+**Reliability-Gated Prototypical Open-Set Recognition for Cross-Session Behavioural Biometrics in Virtual Reality**
 
----
+by Onyeka J. Nwobodo, Jeremiah O. Abimbola, and Godlove Suila Kuaban.
 
-## Overview
+RG-POSR is a multimodal open-set behavioural-biometric framework for cross-session virtual-reality data. The implementation supports head/HMD, left-controller, right-controller, and gaze modalities, together with reliability-aware multimodal fusion and prototype-based open-set recognition.
 
-RG-POSR combines:
-
-- modality-specific temporal identity encoders;
-- trainable identity prototypes;
-- signal-derived modality reliability estimation;
-- observation-dependent multimodal fusion;
-- reliability-conditioned prototype-distance rejection.
-
-The four XR modalities are:
-
-- head/HMD motion;
-- left-controller motion;
-- right-controller motion;
-- gaze.
-
-Reliability is estimated from descriptors computed directly from the observed standardised signal. Corruption type, corruption severity, and other degradation metadata are not supplied to the reliability estimator at inference time.
+For the complete method description, experimental protocol, evaluation methodology, statistical analysis, and results, please refer to the paper.
 
 ---
 
-## Repository Contents
+## Repository contents
 
-### Core RG-POSR implementation
+The repository contains materials used to implement and evaluate the experiments reported in the paper, including:
 
-| File | Description |
-|---|---|
-| `train_review_rg_posr.py` | Main revised RG-POSR training and evaluation runner |
-| `train_review_rg_posr_base.py` | Base implementation used by the revised runner |
-| `blind_reliability.py` | Blind reliability-descriptor and reliability-estimation functions |
-| `freeze_blind_reliability_cache.py` | Utility for generating/freezing blind reliability descriptors |
-| `freeze_review_protocol.py` | Utility for constructing/freezing the review protocol |
+- RG-POSR model implementation;
+- reliability-estimation and multimodal-fusion components;
+- prototype-based open-set recognition;
+- frozen participant and session protocol definitions;
+- training and experiment-launch scripts;
+- Session-1 calibration utilities;
+- plain-prototype comparator experiments;
+- energy-score evaluation utilities;
+- robustness evaluation scripts;
+- result aggregation and statistical-analysis utilities;
+- supporting revision-analysis materials.
 
----
-
-### Frozen protocol files
-
-| File | Description |
-|---|---|
-| `frozen_protocol_v1.json` | Frozen experimental-protocol definition |
-| `frozen_protocol_v1.yaml` | YAML representation of the frozen protocol |
-| `corruption_protocol_frozen_v1.yaml` | Frozen missing/corrupted-modality evaluation protocol |
-
-These files document the protocol structure used for the revised experiments.
+The manuscript should be treated as the authoritative description of the final experimental protocol and reported analyses.
 
 ---
 
-### Main five-seed experiment launchers
+## Dataset
 
-The primary experiments use five fixed random seeds:
+The experiments use the publicly available **Who Is Alyx?** virtual-reality behavioural-biometric dataset.
 
-```text
-42
-52
-62
-72
-82
-```
+Repository:
 
-The corresponding Windows batch files are:
+https://github.com/cschell/who-is-alyx
 
-```text
-run_protocol_seed42_all_variants.bat
-run_protocol_seed52_all_variants.bat
-run_protocol_seed62_all_variants.bat
-run_protocol_seed72_resume_safe.bat
-run_protocol_seed82_resume_safe.bat
-```
+Zenodo archive:
 
-The four reliability formulations evaluated under the same frozen protocol are:
+https://doi.org/10.5281/zenodo.8379914
 
-```text
-uniform
-direct
-linear
-nonlinear
-```
+Please refer to the original dataset documentation for acquisition details and licensing information.
+
+The participant selection, cross-session partitioning, preprocessing, and open-set evaluation protocol used in RG-POSR are described in the accompanying paper.
 
 ---
 
-## Experimental Protocol
+## Experimental protocol
 
-The frozen cross-session protocol contains:
+The repository supports the participant-disjoint two-session evaluation described in the paper.
 
-- **69 participants in total**
-- **49 enrolled participants**
-- **20 participant-disjoint final unknown participants**
-- **5 random seeds**
-- **5 participant-disjoint pseudo-unknown calibration folds**
-- **10-s base identity windows**
-- aggregation durations of **30 s, 60 s, and 120 s**
+At a high level:
 
-### Session usage
+- Session 1 is used for model development and pseudo-unknown calibration;
+- Session 2 is reserved for frozen cross-session evaluation;
+- final unknown users are excluded from model development and calibration;
+- calibration parameters are selected without using Session-2 observations.
 
-**Session 1**
-
-Used for:
-
-- model training;
-- validation;
-- participant-disjoint pseudo-unknown calibration;
-- selection of open-set parameters.
-
-**Session 2**
-
-Reserved for:
-
-- frozen cross-session evaluation of enrolled users;
-- evaluation of participant-disjoint final unknown users.
-
-Final unknown users are not used for training, preprocessing fitting, checkpoint selection, reliability-parameter selection, or rejection-threshold calibration.
+The exact participant split, aggregation procedure, calibration strategy, hyperparameters, random seeds, and evaluation measures are documented in the paper.
 
 ---
 
-## Model Configuration
+## RG-POSR variants
 
-The principal revised configuration uses:
+The repository includes the reliability formulations evaluated in the paper:
 
-```text
-GRU layers per modality:        1
-GRU hidden dimension:          64
-Identity embedding dimension:  64
-Reliability hidden dimension:  32
-Reliability activation:        GELU
-Reliability-head dropout:      0.2
-Batch size:                    64
-Maximum epochs:                30
-Early-stopping patience:       8
-Learning rate:                 1e-3
-Weight decay:                  1e-4
-ArcFace-style scale:           30
-Angular margin:                0.3
-Monotonic margin:              0.15
-Corruption probability:        0.6
-```
+- **Uniform reliability**
+- **Direct reliability**
+- **Linear reliability**
+- **Nonlinear reliability**
 
-Optimisation uses **AdamW**.
+It also includes the comparator and ablation configurations used in the manuscript.
+
+For mathematical definitions and interpretation of the different formulations, please refer to the Methods section of the paper.
 
 ---
 
-## Reliability Descriptors
+## Reliability estimation
 
-The learned reliability formulations use eight descriptors computed from each observed standardised modality sequence:
+The reported review models use modality-specific signal-derived reliability estimation.
 
-1. inactive-frame fraction;
-2. flatline-transition fraction;
-3. median frame norm;
-4. 95th-percentile frame norm;
-5. median temporal-difference norm;
-6. 95th-percentile temporal-difference norm;
-7. temporal energy ratio;
-8. mean feature standard deviation.
+Reliability is inferred from the observed behavioural signal rather than from corruption labels, corruption type, or corruption severity supplied at inference time.
 
-No corruption label or severity value is passed to the reliability estimator.
+The precise descriptor definitions, normalisation procedure, estimator architecture, supervision targets, and reliability-conditioned fusion equations are given in the paper.
 
 ---
 
-## Reliability-Learning Objective
+## Open-set recognition
 
-The full nonlinear formulation uses:
+RG-POSR combines multimodal identity embeddings with prototype-based identity matching and open-set rejection.
 
-```text
-lambda_reg  = 1.0
-lambda_gate = 0.5
-lambda_mono = 0.5
-```
+The repository also includes the alternative open-set scoring evaluations described in the manuscript.
 
-where the three reliability-specific objectives correspond to:
-
-- fidelity regression;
-- gate alignment;
-- monotonic consistency.
-
-The identity objective is trained jointly with these terms.
+Threshold and parameter calibration follow the Session-1-only procedure specified in the paper.
 
 ---
 
-## Reviewer #8 Loss-Term Ablation
+## Robustness evaluation
 
-A focused loss-term ablation was performed to compare the complete nonlinear reliability objective against direct fidelity regression alone.
+The repository contains the robustness-evaluation utilities used for the controlled sensing-degradation experiments reported in the manuscript.
 
-### Full nonlinear objective
+These evaluators operate on frozen trained models without Session-2 retraining or recalibration.
 
-```text
-lambda_reg  = 1.0
-lambda_gate = 0.5
-lambda_mono = 0.5
-```
-
-### Regression-only nonlinear objective
-
-```text
-lambda_reg  = 1.0
-lambda_gate = 0.0
-lambda_mono = 0.0
-```
-
-All other experimental settings were retained, including:
-
-- nonlinear reliability architecture;
-- participant protocol;
-- five random seeds;
-- five calibration folds;
-- aggregation durations;
-- synthetic corruption augmentation;
-- optimisation settings;
-- checkpoint-selection procedure;
-- Session 1 pseudo-unknown calibration;
-- frozen Session 2 evaluation.
-
-The corresponding analysis outputs are:
-
-```text
-reviewer8_full_vs_reg_only_summary.csv
-reviewer8_full_vs_reg_only_paired_stats.csv
-reviewer8_full_vs_reg_only_seedwise.csv
-```
-
-This ablation removes the gate-alignment and monotonic-consistency objectives jointly. It therefore does **not** separately identify the individual contribution of those two auxiliary objectives.
+The corruption definitions, severity settings, evaluation conditions, and interpretation of the robustness experiments are documented in the paper.
 
 ---
 
-## Open-Set Calibration
+## Reproducing the study
 
-The reliability-conditioning exponent is selected from:
+The general workflow is:
 
-```text
-gamma ∈ {0, 0.5, 1, 2}
-```
+1. Obtain the *Who Is Alyx?* dataset.
+2. Prepare the dataset according to the preprocessing protocol described in the paper.
+3. Construct the frozen participant and session partitions.
+4. Train the required RG-POSR formulations.
+5. Perform Session-1 pseudo-unknown calibration.
+6. Evaluate the frozen models on Session 2.
+7. Run the comparator, ablation, and robustness experiments.
+8. Aggregate the outputs and perform the statistical analyses described in the manuscript.
 
-Selection is performed using Session 1 participant-disjoint pseudo-unknown calibration only.
-
-The final selected operating point is frozen before Session 2 evaluation.
-
-The reported open-set measures include:
-
-- known-user acceptance;
-- unknown-user rejection;
-- balanced detection;
-- open-set overall accuracy;
-- AUROC;
-- AUPR;
-- interpolated EER;
-- OSCR.
-
-Paired comparisons across the five seeds use:
-
-- two-sided exact sign-flip tests;
-- paired Cohen's \(d_z\).
+Because the repository contains materials produced at different stages of development and revision, users seeking to reproduce the **reported paper results should follow the final review experiment configuration and the protocol documented in the manuscript**.
 
 ---
 
-## Energy-Score Comparator
+## Code availability
 
-The final tuned energy-score evaluator is:
+The RG-POSR implementation and reproducibility materials are available at:
 
-```text
-evaluate_energy_review_nonlinear_tuned_v2.py
-```
-
-It retains the trained nonlinear RG-POSR representation and prototypes but replaces prototype-distance rejection with an energy score.
-
-The candidate temperature set is:
-
-```text
-T ∈ {0.25, 0.5, 1, 2, 4, 8, 16}
-```
-
-Temperature selection and threshold calibration use **Session 1 only**.
-
-The selected temperature and threshold are then frozen for Session 2 evaluation.
+https://github.com/OJnwobodo/RG-POSR
 
 ---
 
-## Blind Robustness Evaluation
+## Data availability
 
-The final robustness evaluator is:
+The *Who Is Alyx?* dataset is available at:
 
-```text
-evaluate_review_blind_robustness.py
-```
+https://github.com/cschell/who-is-alyx
 
-The robustness experiment evaluates already trained nonlinear RG-POSR and uniform-fusion models.
+and is archived on Zenodo at:
 
-No:
-
-- model retraining;
-- prototype update;
-- reliability-head adaptation;
-- gamma reselection;
-- threshold adjustment;
-- Session 2 recalibration
-
-is performed during the robustness experiment.
-
-### Corruption families
-
-The controlled degradation families are:
-
-```text
-complete modality dropout
-additive Gaussian noise
-contiguous temporal-burst loss
-```
-
-### Severities
-
-```text
-0.25
-0.50
-0.75
-1.00
-```
-
-Corruptions are evaluated separately for:
-
-```text
-head/HMD
-left controller
-right controller
-gaze
-```
+https://doi.org/10.5281/zenodo.8379914
 
 ---
 
-## Calibration Audit Files
+## Citation
 
-The repository contains:
+If you use this repository, please cite the associated paper:
 
-```text
-seed_42_calibration_folds.csv
-seed_52_calibration_folds.csv
-seed_62_calibration_folds.csv
-seed_72_calibration_folds.csv
-seed_82_calibration_folds.csv
-```
+> Onyeka J. Nwobodo, Jeremiah O. Abimbola, and Godlove Suila Kuaban.  
+> **Reliability-Gated Prototypical Open-Set Recognition for Cross-Session Behavioural Biometrics in Virtual Reality.**
 
-These files contain fold-level calibration information including:
-
-- random seed;
-- calibration fold;
-- aggregation duration;
-- number of included users;
-- number of pseudo-unknown users;
-- threshold;
-- known/pseudo-unknown calibration summaries;
-- participant-macro acceptance/rejection quantities;
-- balanced calibration performance.
-
-> **Note:** these CSV files are calibration audit outputs and do not contain the participant identifiers assigned to each fold.
+Publication details and the paper DOI can be added here once available.
 
 ---
 
-## Analysis Notebook
+## Contact
 
-The repository also contains:
-
-```text
-RG_POSR.ipynb
-```
-
-This notebook contains revision-stage analysis and result-verification work associated with the manuscript experiments.
-
----
-
-## Running the Main Experiments
-
-The provided batch files reproduce the main five-seed reliability-model training workflow.
-
-Before running the scripts, update local paths so that they point to:
-
-1. the processed *Who Is Alyx?* dataset;
-2. the frozen protocol directory;
-3. the desired experiment-output directory.
-
-Example:
-
-```powershell
-.\run_protocol_seed42_all_variants.bat
-.\run_protocol_seed52_all_variants.bat
-.\run_protocol_seed62_all_variants.bat
-.\run_protocol_seed72_resume_safe.bat
-.\run_protocol_seed82_resume_safe.bat
-```
-
-The batch files retain the common protocol while evaluating the reliability variants using matched random seeds and participant partitions.
-
----
-
-## Running the Energy-Score Evaluation
-
-After the nonlinear RG-POSR checkpoints have been generated, update the local path constants in:
-
-```text
-evaluate_energy_review_nonlinear_tuned_v2.py
-```
-
-and run:
-
-```powershell
-python evaluate_energy_review_nonlinear_tuned_v2.py
-```
-
-The script performs Session 1-only temperature and threshold calibration before frozen Session 2 evaluation.
-
----
-
-## Running the Robustness Evaluation
-
-Inspect the available arguments using:
-
-```powershell
-python evaluate_review_blind_robustness.py --help
-```
-
-Then provide the required local paths to:
-
-- processed data;
-- frozen protocol;
-- trained model outputs;
-- robustness result directory.
-
----
-
-## Data Availability
-
-The raw *Who Is Alyx?* dataset is **not redistributed in this repository**.
-
-Users should obtain the dataset from its original source and prepare the processed data required by the supplied experimental code.
-
-The experiment code expects the processed data structure used by the frozen protocol.
-
----
-
-## Path Portability
-
-The experiments were developed and executed on Windows.
-
-Some scripts may contain absolute paths from the original experiment workstation. These must be changed to corresponding local paths before reproduction.
-
-Changing local filesystem paths does not require changing:
-
-- random seeds;
-- participant/session roles;
-- calibration-fold logic;
-- aggregation durations;
-- frozen Session 1/Session 2 protocol.
-
----
-
+For questions about the implementation or reproducibility materials, please use the GitHub issue tracker or contact the corresponding author through the details provided in the paper.
